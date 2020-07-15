@@ -2,6 +2,8 @@
 using System.Threading;
 using System.Net.Sockets;
 using System.Text;
+using System.Collections.Generic;
+using System.Runtime.InteropServices;
 
 namespace ChatClient
 {
@@ -13,19 +15,24 @@ namespace ChatClient
         static TcpClient client;
         static NetworkStream stream;
 
+        private static List<NetworkStream> threadsTest = new List<NetworkStream>();
+
+
         static void Main(string[] args)
         {
             Console.Write("Enter your name: ");
             userName = Console.ReadLine();
+
             client = new TcpClient();
             try
             {
                 client.Connect(host, port); //client connection
-                stream = client.GetStream(); // get stream
+                //stream = client.GetStream(); // get stream
+                threadsTest.Add(client.GetStream()); //threadsTest[0]
 
                 string message = userName;
                 byte[] data = Encoding.Unicode.GetBytes(message);
-                stream.Write(data, 0, data.Length);
+                threadsTest[0].Write(data, 0, data.Length);
 
                 // create new stream for receiving the data
                 Thread receiveThread = new Thread(new ThreadStart(ReceiveMessage));
@@ -50,7 +57,7 @@ namespace ChatClient
             {
                 string message = Console.ReadLine();
                 byte[] data = Encoding.Unicode.GetBytes(message);
-                stream.Write(data, 0, data.Length);
+                threadsTest[0].Write(data, 0, data.Length);
             }
         }
         static void ReceiveMessage()
@@ -64,10 +71,10 @@ namespace ChatClient
                     int bytes = 0;
                     do
                     {
-                        bytes = stream.Read(data, 0, data.Length);
+                        bytes = threadsTest[0].Read(data, 0, data.Length);
                         builder.Append(Encoding.Unicode.GetString(data, 0, bytes));
                     }
-                    while (stream.DataAvailable);
+                    while (threadsTest[0].DataAvailable);
 
                     string message = builder.ToString();
                     Console.WriteLine(message);//print the message
@@ -83,8 +90,8 @@ namespace ChatClient
 
         static void Disconnect()
         {
-            if (stream != null)
-                stream.Close();//disconnect the stream
+            if (threadsTest[0] != null)
+                threadsTest[0].Close();//disconnect the stream
             if (client != null)
                 client.Close();//disconnect the client
             Environment.Exit(0); //end process
